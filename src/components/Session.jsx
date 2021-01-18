@@ -43,7 +43,7 @@ const Session = () => {
   const params = useParams();
 
   const [vote, setVote] = React.useState(null);
-  const [revealed, setRevealed] = React.useState(false);
+  const [revealed, setRevealed] = React.useState(true);
 
   const invalidSession = false;
 
@@ -111,7 +111,7 @@ const Session = () => {
   const renderPOSMView = () => {
     return (
       <>
-        <ul className="list-group list-group-flush mb-2">
+        <ul className="border list-group list-group-flush mb-2">
           {sortedParticipants.map((participant) => (
             <li
               className="list-group-item d-flex align-items-center justify-content-between"
@@ -147,7 +147,7 @@ const Session = () => {
   const renderRevealedView = () => {
     return (
       <>
-        <ul className="list-group list-group-flush mb-2">
+        <ul className="border list-group list-group-flush mb-2">
           {sortedParticipants.map((participant) => {
             if (
               participant.role !== roles.PRODUCT_OWNER.value &&
@@ -180,7 +180,7 @@ const Session = () => {
 
   return (
     <Layout>
-      <div className="pt-3">
+      <div>
         {invalidSession ? (
           renderInvalidSessionView()
         ) : (
