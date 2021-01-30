@@ -1,25 +1,22 @@
-import * as React from "react";
-import { useForm } from "react-hook-form";
-import { Link, useHistory } from "react-router-dom";
+import * as React from 'react';
+import { useForm } from 'react-hook-form';
+import { Link, useHistory } from 'react-router-dom';
 
-import Layout from "./Layout";
-import Select from "./Select";
-import TextField from "./TextField";
+import Layout from './Layout';
+import Select from './Select';
+import TextField from './TextField';
 
-import { roleOptions } from "../roles";
-import { socket } from "../socket";
+import { roleOptions } from '../roles';
 
 const JoinSession = () => {
   const { handleSubmit, register } = useForm();
   const history = useHistory();
 
   const onSubmit = (data) => {
-    sessionStorage.setItem("name", data.name);
-    sessionStorage.setItem("role", data.role);
+    sessionStorage.setItem('name', data.name);
+    sessionStorage.setItem('role', data.role);
 
-    socket.emit("create session", (sessionCode) => {
-      history.push(`/session/${sessionCode}`);
-    });
+    history.push(`/session/${data.sessionCode}`);
   };
 
   return (

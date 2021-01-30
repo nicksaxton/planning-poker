@@ -1,42 +1,45 @@
-import * as React from "react";
-import { Link, useParams } from "react-router-dom";
+import * as React from 'react';
+import { useHistory, useParams } from 'react-router-dom';
 
-import Card from "./Card";
-import Layout from "./Layout";
+import Card from './Card';
+import Layout from './Layout';
 
-import { roles } from "../roles";
-import { socket } from "../socket";
+import { roles } from '../roles';
+import { socket } from '../socket';
 
-const points = ["XS", "S", "M", "L", "XL", "?"];
+const points = ['XS', 'S', 'M', 'L', 'XL', '?'];
 
 const Session = () => {
+  const history = useHistory();
   const { sessionCode } = useParams();
 
+  const [invalidSession, setInvalidSession] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
   const [participants, setParticipants] = React.useState([]);
   const [vote, setVote] = React.useState(null);
   const [revealed, setRevealed] = React.useState(true);
 
   React.useEffect(() => {
-    console.log("Running Session effect");
+    const name = sessionStorage.getItem('name');
+    const role = sessionStorage.getItem('role');
 
-    const name = sessionStorage.getItem("name");
-    const role = sessionStorage.getItem("role");
+    socket.emit('join session', name, role, sessionCode, () => {
+      setInvalidSession(true);
+      setLoading(false);
+    });
 
-    socket.emit("join session", name, role, sessionCode);
-
-    socket.on("refresh session", (sessionData) => {
-      setParticipants(Object.values(sessionData.members));
+    socket.on('refresh session', (sessionData) => {
+      setParticipants(sessionData.members);
       setRevealed(sessionData.revealed);
+      setLoading(false);
     });
 
     return () => {
-      socket.removeAllListeners("refresh session");
+      socket.removeAllListeners('refresh session');
     };
-  }, []);
+  }, [sessionCode]);
 
-  const invalidSession = false;
-
-  const role = sessionStorage.getItem("role");
+  const role = sessionStorage.getItem('role');
 
   const sortedParticipants = React.useMemo(() => {
     return participants.sort((a, b) => {
@@ -57,6 +60,21 @@ const Session = () => {
     });
   }, [participants]);
 
+  const onReset = () => {
+    socket.emit('reset', sessionCode);
+  };
+
+  const onReveal = () => {
+    socket.emit('reveal', sessionCode, () => {
+      setRevealed(true);
+    });
+  };
+
+  const onVote = (vote) => {
+    setVote(vote);
+    socket.emit('vote', vote, sessionCode);
+  };
+
   const renderDevQAView = () => {
     return points.map((point, index, points) => {
       if (index % 2 === 0) {
@@ -65,7 +83,7 @@ const Session = () => {
             <div className="col">
               <Card
                 active={vote === points[index]}
-                onClick={() => setVote(points[index])}
+                onClick={() => onVote(points[index])}
               >
                 {points[index]}
               </Card>
@@ -73,7 +91,7 @@ const Session = () => {
             <div className="col">
               <Card
                 active={vote === points[index + 1]}
-                onClick={() => setVote(points[index + 1])}
+                onClick={() => onVote(points[index + 1])}
               >
                 {points[index + 1]}
               </Card>
@@ -90,9 +108,12 @@ const Session = () => {
     return (
       <div className="alert alert-danger">
         <p>The session you are trying to join does not exist.</p>
-        <Link className="btn btn-danger btn-block" to="/join">
+        <button
+          className="btn btn-danger btn-block"
+          onClick={() => history.goBack()}
+        >
           Go Back
-        </Link>
+        </button>
       </div>
     );
   };
@@ -108,25 +129,24 @@ const Session = () => {
             >
               <div>
                 <h5>{participant.name}</h5>
-                <small>{roles[participant.role]?.label}</small>
+                <small className="text-muted">
+                  {roles[participant.role]?.label}
+                </small>
               </div>
               <i
                 className={`${
                   participant.role === roles.SCRUM_MASTER.value ||
                   participant.role === roles.PRODUCT_OWNER.value
-                    ? "bi-star"
-                    : participant.voted
-                    ? "bi-check-circle"
-                    : "bi-x-circle"
+                    ? 'bi-star text-warning'
+                    : participant.vote
+                    ? 'bi-check-circle text-success'
+                    : 'bi-x-circle text-danger'
                 }`}
               ></i>
             </li>
           ))}
         </ul>
-        <button
-          className="btn btn-primary btn-lg btn-block"
-          onClick={() => setRevealed(true)}
-        >
+        <button className="btn btn-primary btn-lg btn-block" onClick={onReveal}>
           Reveal
         </button>
       </>
@@ -151,7 +171,7 @@ const Session = () => {
                     <h5>{participant.name}</h5>
                     <small>{roles[participant.role].label}</small>
                   </div>
-                  <h3>XL</h3>
+                  <h3>{participant.vote}</h3>
                 </li>
               );
             }
@@ -159,15 +179,16 @@ const Session = () => {
             return null;
           })}
         </ul>
-        <button
-          className="btn btn-primary btn-lg btn-block"
-          onClick={() => setRevealed(false)}
-        >
+        <button className="btn btn-primary btn-lg btn-block" onClick={onReset}>
           Reset
         </button>
       </>
     );
   };
+
+  if (loading) {
+    return null;
+  }
 
   return (
     <Layout>
